@@ -17,7 +17,7 @@
  All text above, and the splash screen below must be
  included in any redistribution.
  **************************************************************************/
-
+/*
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -413,3 +413,4 @@ void testanimate(const uint8_t *bitmap, uint8_t w, uint8_t h) {
     }
   }
 }
+*/
