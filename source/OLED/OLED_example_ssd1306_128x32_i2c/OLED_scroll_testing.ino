@@ -20,7 +20,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define LOGO_HEIGHT   16
 #define LOGO_WIDTH    16
 #define SCROLL_DELAY  5 
-//  for a text size of 4, 5 chars fit on the screen and one char is approx 24 pixels wide
+// for a text size of 4, 5 chars fit on the screen and one char is approx 24 pixels wide
 // text size 3: 6 chars on screen, 18 pixels
 #define DISP_CHARS    6
 #define CHAR_PIXELS   18
@@ -63,7 +63,7 @@ void setup() {
 void loop() { //128x32
   
   String test("this is a longer testing string");
-  test_write(test);
+  scroll_banner(test);
   display.clearDisplay();
   display.display();
   delay(500);
@@ -71,27 +71,26 @@ void loop() { //128x32
 
 }
 
-void test_write(String text)
+void scroll_banner(String text)
 {
   display.clearDisplay();
   display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setCursor(0, 0);     // Start at top-left corner
-  //display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  //display.setCursor(0, 0);     // Start at top-left corner
 
-  int num_sections = (text.length() / 5) + 1;
+  //int num_sections = (text.length() / 5) + 1;
   int length = text.length();
-  int lead_char_index = 0;
-  String screen_sections[num_sections];
+  //int lead_char_index = 0;
+  //String screen_sections[num_sections];
   String displayed_chars(text);
   String first_set;
 
-  for (int l = 0; l < DISP_CHARS; l++)
+  for (int l = 0; l < DISP_CHARS; l++) // copy first set of chars to a string 
   {
     first_set.concat(displayed_chars[l]);
   }
 
-  for (int c = 128 - CHAR_PIXELS; c > 0; c--)
+  for (int c = 128 - CHAR_PIXELS; c > 0; c--) //scroll the first "word" to the left
   {
     display.setCursor(c, 0);
     for (int i=0; i < ((128 - c) / CHAR_PIXELS); i++)
@@ -102,8 +101,13 @@ void test_write(String text)
     delay(SCROLL_DELAY);
     display.clearDisplay();
   }
-
-  while (displayed_chars.length() > 1)
+/* 
+Now repeat: 
+-delete a char from the front of the string
+-set cursor to the right the width of that char
+-scroll that width to the left
+*/
+  while (displayed_chars.length() > 1) 
   {
     displayed_chars.remove(0, 1);
     for (int c = CHAR_PIXELS; c > 0; c--)
@@ -118,46 +122,9 @@ void test_write(String text)
       display.clearDisplay();
     }
   }
-
-  /*
-  for (int q = 0; q < num_sections; q++)
-  {
-    for (int l = 0; l < 5; l++) 
-    {
-      screen_sections[q].concat(text[l + (5 * q)]);
-    }
-  }
-
-  for (int a = 0; a < num_sections; a++)
-  {
-    for (int c = 128; c > 0; c--)
-    {
-      display.setCursor(c, 0);
-      for (int i=0; i<screen_sections[a].length(); i++)
-      {
-        display.write(screen_sections[a].charAt(i));
-      }
-      display.display();
-      delay(20);
-      display.clearDisplay();
-    }
-  }
-
-  */
-  /*
-  for (int i=0; i<text.length(); i++)
-  {
-    display.write(text.charAt(i));
-  }
-  
-  display.display();
-  delay(2000);
-
-  display.startscrollleft(0x00, 0x0F);
-  delay(1000*text.length());
-  display.stopscroll();
-  */
 }
+
+
 void test_animate_pixel()
 {
   for (int i = 128; i > 0; i--) 
