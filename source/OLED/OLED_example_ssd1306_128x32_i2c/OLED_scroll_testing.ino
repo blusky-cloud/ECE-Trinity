@@ -19,7 +19,11 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define LOGO_HEIGHT   16
 #define LOGO_WIDTH    16
-#define SCROLL_DELAY  5
+#define SCROLL_DELAY  5 
+//  for a text size of 4, 5 chars fit on the screen and one char is approx 24 pixels wide
+// text size 3: 6 chars on screen, 18 pixels
+#define DISP_CHARS    6
+#define CHAR_PIXELS   18
 
 static const unsigned char PROGMEM logo_bmp[] =
 { 0b00000000, 0b11000000,
@@ -70,7 +74,7 @@ void loop() { //128x32
 void test_write(String text)
 {
   display.clearDisplay();
-  display.setTextSize(4);
+  display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setCursor(0, 0);     // Start at top-left corner
   //display.cp437(true);         // Use full 256 char 'Code Page 437' font
@@ -80,13 +84,19 @@ void test_write(String text)
   int lead_char_index = 0;
   String screen_sections[num_sections];
   String displayed_chars(text);
+  String first_set;
 
-  for (int c = 128; c > 0; c--)
+  for (int l = 0; l < DISP_CHARS; l++)
+  {
+    first_set.concat(displayed_chars[l]);
+  }
+
+  for (int c = 128 - CHAR_PIXELS; c > 0; c--)
   {
     display.setCursor(c, 0);
-    for (int i=0; i < 5; i++)
+    for (int i=0; i < ((128 - c) / CHAR_PIXELS); i++)
     {
-      display.write(displayed_chars.charAt(i));
+      display.write(first_set.charAt(i));
     }
     display.display();
     delay(SCROLL_DELAY);
@@ -96,10 +106,10 @@ void test_write(String text)
   while (displayed_chars.length() > 1)
   {
     displayed_chars.remove(0, 1);
-    for (int c = 24; c > 0; c--)
+    for (int c = CHAR_PIXELS; c > 0; c--)
     {
       display.setCursor(c, 0);
-      for (int i=0; i < 5; i++)
+      for (int i=0; i < DISP_CHARS; i++)
       {
         display.write(displayed_chars.charAt(i));
       }
