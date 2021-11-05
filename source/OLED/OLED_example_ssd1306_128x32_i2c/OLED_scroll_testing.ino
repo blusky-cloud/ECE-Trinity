@@ -19,6 +19,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define LOGO_HEIGHT   16
 #define LOGO_WIDTH    16
+#define SCROLL_DELAY  5
+
 static const unsigned char PROGMEM logo_bmp[] =
 { 0b00000000, 0b11000000,
   0b00000001, 0b11000000,
@@ -36,6 +38,7 @@ static const unsigned char PROGMEM logo_bmp[] =
   0b01111100, 0b11110000,
   0b01110000, 0b01110000,
   0b00000000, 0b00110000 };
+
 void setup() {
   Serial.begin(9600);
 
@@ -49,15 +52,8 @@ void setup() {
   // the library initializes this with an Adafruit splash screen.
   display.display();
   delay(1000); // Pause for 2 seconds
-
-  // Clear the buffer
   display.clearDisplay();
   display.display();
-  // Draw a single pixel in white
-  display.drawPixel(10, 10, SSD1306_WHITE);
-  delay(1000);
-  display.clearDisplay();
-
 }
 
 void loop() { //128x32
@@ -80,8 +76,40 @@ void test_write(String text)
   //display.cp437(true);         // Use full 256 char 'Code Page 437' font
 
   int num_sections = (text.length() / 5) + 1;
+  int length = text.length();
+  int lead_char_index = 0;
   String screen_sections[num_sections];
-  
+  String displayed_chars(text);
+
+  for (int c = 128; c > 0; c--)
+  {
+    display.setCursor(c, 0);
+    for (int i=0; i < 5; i++)
+    {
+      display.write(displayed_chars.charAt(i));
+    }
+    display.display();
+    delay(SCROLL_DELAY);
+    display.clearDisplay();
+  }
+
+  while (displayed_chars.length() > 1)
+  {
+    displayed_chars.remove(0, 1);
+    for (int c = 24; c > 0; c--)
+    {
+      display.setCursor(c, 0);
+      for (int i=0; i < 5; i++)
+      {
+        display.write(displayed_chars.charAt(i));
+      }
+      display.display();
+      delay(SCROLL_DELAY);
+      display.clearDisplay();
+    }
+  }
+
+  /*
   for (int q = 0; q < num_sections; q++)
   {
     for (int l = 0; l < 5; l++) 
@@ -100,10 +128,12 @@ void test_write(String text)
         display.write(screen_sections[a].charAt(i));
       }
       display.display();
-      delay(100);
+      delay(20);
       display.clearDisplay();
     }
   }
+
+  */
   /*
   for (int i=0; i<text.length(); i++)
   {
