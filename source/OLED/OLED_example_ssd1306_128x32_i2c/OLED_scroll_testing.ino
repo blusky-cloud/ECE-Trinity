@@ -57,7 +57,7 @@ void setup() {
   display.display();
   delay(1000); // Pause for 2 seconds
   display.clearDisplay();
-  display.display();
+
 }
 
 void loop() { //128x32
@@ -76,12 +76,8 @@ void scroll_banner(String text)
   display.clearDisplay();
   display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE); // Draw white text
-  //display.setCursor(0, 0);     // Start at top-left corner
 
-  //int num_sections = (text.length() / 5) + 1;
   int length = text.length();
-  //int lead_char_index = 0;
-  //String screen_sections[num_sections];
   String displayed_chars(text);
   String first_set;
 
