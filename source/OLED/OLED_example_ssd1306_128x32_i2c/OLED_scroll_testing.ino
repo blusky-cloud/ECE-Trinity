@@ -48,11 +48,11 @@ void setup() {
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
   display.display();
-  delay(2000); // Pause for 2 seconds
+  delay(1000); // Pause for 2 seconds
 
   // Clear the buffer
   display.clearDisplay();
-
+  display.display();
   // Draw a single pixel in white
   display.drawPixel(10, 10, SSD1306_WHITE);
   delay(1000);
@@ -60,12 +60,15 @@ void setup() {
 
 }
 
-void loop() {
-  String test("TES Longer Test String scroll");
+void loop() { //128x32
+  
+  String test("this is a longer testing string");
   test_write(test);
   display.clearDisplay();
   display.display();
   delay(500);
+  
+
 }
 
 void test_write(String text)
@@ -75,15 +78,56 @@ void test_write(String text)
   display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setCursor(0, 0);     // Start at top-left corner
   //display.cp437(true);         // Use full 256 char 'Code Page 437' font
+
+  int num_sections = (text.length() / 5) + 1;
+  String screen_sections[num_sections];
   
+  for (int q = 0; q < num_sections; q++)
+  {
+    for (int l = 0; l < 5; l++) 
+    {
+      screen_sections[q].concat(text[l + (5 * q)]);
+    }
+  }
+
+  for (int a = 0; a < num_sections; a++)
+  {
+    for (int c = 128; c > 0; c--)
+    {
+      display.setCursor(c, 0);
+      for (int i=0; i<screen_sections[a].length(); i++)
+      {
+        display.write(screen_sections[a].charAt(i));
+      }
+      display.display();
+      delay(100);
+      display.clearDisplay();
+    }
+  }
+  /*
   for (int i=0; i<text.length(); i++)
   {
     display.write(text.charAt(i));
   }
+  
   display.display();
   delay(2000);
 
   display.startscrollleft(0x00, 0x0F);
   delay(1000*text.length());
   display.stopscroll();
+  */
+}
+void test_animate_pixel()
+{
+  for (int i = 128; i > 0; i--) 
+  {
+    display.drawPixel(i, 31, SSD1306_WHITE);
+    
+    display.display();
+    delay(100);
+    //display.display();
+    display.clearDisplay();
+    //display.sestCursor(i, 0);
+  }
 }
