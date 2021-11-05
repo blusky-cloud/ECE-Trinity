@@ -5,6 +5,8 @@
  *
  * Debug configuration can be found in debugger.h
  *
+ * Probably should have a destructor, but on the uC it doesn't matter
+ *
  * Author: Benjamin Crall 
  */
 
