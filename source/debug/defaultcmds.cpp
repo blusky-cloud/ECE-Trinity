@@ -8,9 +8,6 @@
 #include "defaultcmds.h"
 #include "debugger.h"
 
-
-#warning "defaultcmds.cpp"
-
 /*
  * Debug command to send text back to the user.
  * Prints all arguments after the first to DEBUG_SERIAL with a space between.
