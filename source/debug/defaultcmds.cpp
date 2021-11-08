@@ -6,6 +6,10 @@
  */
 
 #include "defaultcmds.h"
+#include "debugger.h"
+
+
+#warning "defaultcmds.cpp"
 
 /*
  * Debug command to send text back to the user.
@@ -48,11 +52,11 @@ void light(int argc, char* argv[]) {
   if(argc >= 2) {
     if(strcmp(argv[1], "off") == 0) {
       digitalWrite(LED_BUILTIN, LOW);
-      debug.println("Turning light off");
+      DEBUG_SERIAL.println("Turning light off");
       return;
     } else if(strcmp(argv[1], "on") == 0) {
       digitalWrite(LED_BUILTIN, HIGH);
-      debug.println("Turning light on");
+      DEBUG_SERIAL.println("Turning light on");
       return;
     }
   }

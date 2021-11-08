@@ -5,6 +5,7 @@
  */
 
 // Include the debugger stuff
+#warning "Trying to load the debugger stuffs"
 #include "debugger.h"
 
 // This is the debugger object itself

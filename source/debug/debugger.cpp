@@ -33,10 +33,10 @@ Debugger::Debugger(void) {
 
   // Load the default set of commands
   pinMode(LED_BUILTIN, OUTPUT);
-  debug.registerCommand("echo", &echo);
-  debug.registerCommand("light", &light);
-  debug.registerCommand("lumos", &lumos);
-  debug.registerCommand("nox", &nox);
+  registerCommand("echo", &echo);
+  registerCommand("light", &light);
+  registerCommand("lumos", &lumos);
+  registerCommand("nox", &nox);
   
   // Let's go!
   DEBUG_SERIAL.println("Debugger running");

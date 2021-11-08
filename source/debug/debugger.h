@@ -21,6 +21,7 @@
 // The maximum number of arguments in each debug command, including the command itself. Default 32
 #define DEBUG_MAX_COMMAND_ARGS 32
 // The Serial interface to use for debug commands. Default Serial
+#warning "Loading DEBUG_SERIAL"
 #define DEBUG_SERIAL Serial
 // The baud rate for debug commands. Default 115200
 #define DEBUG_SERIAL_BAUD 115200
