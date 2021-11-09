@@ -5,8 +5,8 @@
  * Author: Benjamin Crall 
  */
 
-#include "defaultcmds.h"
-#include "debugger.h"
+#include "./defaultcmds.h"
+#include "./debugger.h"
 
 /*
  * Debug command to send text back to the user.

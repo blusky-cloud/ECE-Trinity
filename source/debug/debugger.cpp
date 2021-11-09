@@ -12,8 +12,8 @@
 
 #include <Arduino.h>
 
-#include "debugger.h"
-#include "defaultcmds.h"
+#include "./debugger.h"
+#include "./defaultcmds.h"
 
 /*
  * Initializes the debugger.
