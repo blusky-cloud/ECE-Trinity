@@ -37,6 +37,7 @@ Debugger::Debugger(void) {
   registerCommand("light", &light);
   registerCommand("lumos", &lumos);
   registerCommand("nox", &nox);
+  registerCommand("mac_address", &mac_address);
   
   // Let's go!
   DEBUG_SERIAL.println("Debugger running");

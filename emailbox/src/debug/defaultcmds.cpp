@@ -8,6 +8,8 @@
 #include "./defaultcmds.h"
 #include "./debugger.h"
 
+#include <WiFi.h>
+
 /*
  * Debug command to send text back to the user.
  * Prints all arguments after the first to DEBUG_SERIAL with a space between.
@@ -58,4 +60,13 @@ void light(int argc, char* argv[]) {
     }
   }
   DEBUG_SERIAL.println("I don't know what you want me to do with my light!");
+}
+
+/*
+ * Gets the MAC address of the ESP32. Needed for registering
+ * devices to some WiFi networks
+ */
+void mac_address(int argc, char* argv[]) {
+  DEBUG_SERIAL.print("ESP Board MAC Address:  ");
+  DEBUG_SERIAL.println(WiFi.macAddress());
 }
