@@ -6,13 +6,15 @@
 
 // Include the debugger stuff
 #include "src/debug/debugger.h"
+#include "src/email/email.h"
 
 // This is the debugger object itself
 Debugger debug;
+EmailClient ec(debug);
 
 // No additional setup is required.
 void setup() {
-
+  ec.updateEmails();
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing
