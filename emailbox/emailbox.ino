@@ -14,6 +14,7 @@ EmailClient ec(debug);
 
 // No additional setup is required.
 void setup() {
+  ec.begin();
   ec.updateEmails();
 }
 

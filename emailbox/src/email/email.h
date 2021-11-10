@@ -21,14 +21,14 @@
 class EmailClient {
   public:
     EmailClient(Debugger dbg);
+    void begin();
     void updateEmails(void);
     bool hasEmails(void);
     void getLatestSubject(char* whereToPut);
   private:
-    IMAPSession imap;
-    /* Callback function to get the Email reading status */
-void imapCallback(IMAP_Status status);
-
+    static bool busy;
+    Debugger dbg;
+};
 /* Print the list of mailbox folders */
 void printAllMailboxesInfo(IMAPSession &imap);
 
@@ -40,6 +40,8 @@ void printMessages(std::vector<IMAP_MSG_Item> &msgItems, bool headerOnly);
 
 /* Print all attachments info from the message */
 void printAttacements(std::vector<IMAP_Attach_Item> &atts);
-};
+
+/* Callback function to get the Email reading status */
+void imapCallback(IMAP_Status status);
 
 #endif
