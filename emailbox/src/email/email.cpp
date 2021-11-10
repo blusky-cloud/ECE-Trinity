@@ -9,12 +9,18 @@
 
 IMAPSession imap;
 
-EmailClient::EmailClient(Debugger dbgr) {
+EmailClient::EmailClient(Debugger* dbgr) {
   dbg = dbgr;
 }
 
+void emailCommand(int argc, char* argv[], Debugger* dbg) {
+  DEBUG_SERIAL.println("EMAIL!");
+}
+
 void EmailClient::begin() {
-  dbg.println("Message!");
+  dbg->println("Message!");
+  dbg->registerCommand("email", &emailCommand);
+  dbg->println("Tis a line");
 
   Serial.print("Connecting to AP");
 
@@ -59,7 +65,7 @@ void EmailClient::updateEmails(void) {
     IMAP_Config config;
 
     /* Set seen flag */
-    config.fetch.set_seen = true;
+    config.fetch.set_seen = false;
 
     /* Search criteria */
     config.search.criteria = "";

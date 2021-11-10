@@ -18,16 +18,18 @@
 */
 #define IMAP_PORT esp_mail_imap_port_993
 
+void emailCommand(int argc, char* argv[], Debugger* dbg);
+
 class EmailClient {
   public:
-    EmailClient(Debugger dbg);
+    EmailClient(Debugger* dbg);
     void begin();
     void updateEmails(void);
     bool hasEmails(void);
     void getLatestSubject(char* whereToPut);
   private:
     static bool busy;
-    Debugger dbg;
+    Debugger* dbg;
 };
 /* Print the list of mailbox folders */
 void printAllMailboxesInfo(IMAPSession &imap);

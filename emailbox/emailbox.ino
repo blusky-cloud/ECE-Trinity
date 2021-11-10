@@ -10,7 +10,7 @@
 
 // This is the debugger object itself
 Debugger debug;
-EmailClient ec(debug);
+EmailClient ec(&debug);
 
 // No additional setup is required.
 void setup() {

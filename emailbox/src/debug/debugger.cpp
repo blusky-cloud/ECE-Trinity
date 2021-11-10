@@ -13,7 +13,7 @@
 #include <Arduino.h>
 
 #include "./debugger.h"
-#include "./defaultcmds.h"
+#include "./defaultcmds.h":
 
 /*
  * Initializes the debugger.
@@ -38,7 +38,7 @@ Debugger::Debugger(void) {
   registerCommand("lumos", &lumos);
   registerCommand("nox", &nox);
   registerCommand("mac_address", &mac_address);
-  
+  registerCommand("help", &help);
   // Let's go!
   DEBUG_SERIAL.println("Debugger running");
 }
@@ -91,7 +91,7 @@ void Debugger::read(void) {
       for(int i = 0; i < numDebugCommands; i++) {
         DebugCommand dc = commands[i];
         if(strcmp(dc.name, parts[0]) == 0) {
-          dc.exec(num, parts);
+          dc.exec(num, parts, this);
           return; // Leave. There may be some stuff left in the hardware buffer, but that's fine. We'll get to it next time
         }
       }
@@ -125,7 +125,8 @@ void Debugger::println(char* str) {
  *    which allows for multiple commands to use the same handler function if you want)
  * See defaultcmds.cpp for example implementations.
  */
-void Debugger::registerCommand(char* name, void(*exec)(int, char**)) {
+void Debugger::registerCommand(char* name, void(*exec)(int, char**, Debugger*)) {
+  Serial.printf("Adding command %s\n", name);
   if(numDebugCommands < DEBUG_MAX_COMMANDS) {
     DebugCommand dc;
     dc.name = name;
