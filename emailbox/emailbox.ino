@@ -1,6 +1,6 @@
 /* Email mailbox thingy
  *
- * This requires the 'ESP Mail Client' library version 1.5.6 by Mobzit
+ * This requires the 'SSLClient' library version 1.6.11 by Noah Koontz
  *
  * Author: Benjamin Crall
  */
@@ -17,7 +17,7 @@ EmailClient email(&debug);
 void setup() {
   // no email errors hree please
   email.begin();
-  email.updateEmails();
+  email.refresh();
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing
