@@ -9,21 +9,12 @@
 
 #define MAX_EMAIL_SUBJECT_LENGTH 256
 
-/* The imap host name e.g. imap.gmail.com for GMail or outlook.office365.com for Outlook */
-#define IMAP_HOST "imap.gmail.com"
-
-/** The imap port e.g. 
- * 143  or esp_mail_imap_port_143
- * 993 or esp_mail_imap_port_993
-*/
-#define IMAP_PORT esp_mail_imap_port_993
-
 void emailCommand(int argc, char* argv[], Debugger* dbg);
 
 class EmailClient {
   public:
     EmailClient(Debugger* dbg);
-    void begin();
+    void begin(void);
     void updateEmails(void);
     bool hasEmails(void);
     void getLatestSubject(char* whereToPut);
@@ -45,5 +36,8 @@ void printAttacements(std::vector<IMAP_Attach_Item> &atts);
 
 /* Callback function to get the Email reading status */
 void imapCallback(IMAP_Status status);
+void statusCommandCallback(const char *res);
+
+extern EmailClient email;
 
 #endif

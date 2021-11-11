@@ -1,5 +1,6 @@
-/* Basic example to of the debug command interface.
- * The debugger will open its serial interface at 115200 baud
+/* Email mailbox thingy
+ *
+ * This requires the 'ESP Mail Client' library version 1.5.6 by Mobzit
  *
  * Author: Benjamin Crall
  */
@@ -10,12 +11,13 @@
 
 // This is the debugger object itself
 Debugger debug;
-EmailClient ec(&debug);
+EmailClient email(&debug);
 
 // No additional setup is required.
 void setup() {
-  ec.begin();
-  ec.updateEmails();
+  // no email errors hree please
+  email.begin();
+  email.updateEmails();
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing

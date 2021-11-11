@@ -8,19 +8,40 @@
 #include "../../src/debug/debugger.h"
 
 IMAPSession imap;
+IMAP_Config config;
 
 EmailClient::EmailClient(Debugger* dbgr) {
   dbg = dbgr;
 }
 
-void emailCommand(int argc, char* argv[], Debugger* dbg) {
-  DEBUG_SERIAL.println("EMAIL!");
+char resp[32];
+
+void statusCommandCallback(const char *res) {
+    Serial.print("< S: ");
+    Serial.println(res);
+    strcpy(resp, res);
+    Serial.println("Got status back");
 }
 
-void EmailClient::begin() {
-  dbg->println("Message!");
+
+void emailCommand(int argc, char* argv[], Debugger* dbg) {
+  if(argc < 2) {
+    email.updateEmails();
+  } else {
+    if(!strcmp(argv[1], "status")) {
+      Serial.println("Getting status ...");
+      bool sts = imap.sendCustomCommand("A042 STATUS INBOX (UNSEEN)", &statusCommandCallback);
+      Serial.printf("%s %s", resp, (sts) ? "yes" : "no");
+    } else {
+      Serial.print("No can do da thingy "); 
+      Serial.println(argv[1]); 
+    }
+  }
+}
+
+void EmailClient::begin(void) {
+  
   dbg->registerCommand("email", &emailCommand);
-  dbg->println("Tis a line");
 
   Serial.print("Connecting to AP");
 
@@ -45,10 +66,8 @@ void EmailClient::begin() {
   * Debug port can be changed via ESP_MAIL_DEFAULT_DEBUG_PORT in ESP_Mail_FS.h
   */
   imap.debug(0);
-}
 
-void EmailClient::updateEmails(void) {
-    /* Set the callback function to get the reading results */
+      /* Set the callback function to get the reading results */
   imap.callback(imapCallback);
 
     /* Declare the session config data */
@@ -59,88 +78,88 @@ void EmailClient::updateEmails(void) {
   session.server.port = IMAP_PORT;
   session.login.email = EMAIL_ADDRESS;
   session.login.password = EMAIL_PASSWORD;
-
   
-    /* Setup the configuration for searching or fetching operation and its result */
-    IMAP_Config config;
+  /* Setup the configuration for searching or fetching operation and its result */
 
-    /* Set seen flag */
-    config.fetch.set_seen = false;
+  /* Set seen flag */
+  config.fetch.set_seen = false;
 
-    /* Search criteria */
-    config.search.criteria = "";
+  /* Search criteria */
+  config.search.criteria = "(UNSEEN)";
 
-    /* Also search the unseen message */
-    config.search.unseen_msg = true;
+  /* Also search the unseen message */
+  config.search.unseen_msg = true;
 
-    /* Set the storage to save the downloaded files and attachments */
-    config.storage.saved_path = "/email_data";
+  /* Set the storage to save the downloaded files and attachments */
+  config.storage.saved_path = "/email_data";
 
-    /** The file storage type e.g.
-     * esp_mail_file_storage_type_none,
-     * esp_mail_file_storage_type_flash, and 
-     * esp_mail_file_storage_type_sd 
-    */
-    config.storage.type = esp_mail_file_storage_type_none;
+  /** The file storage type e.g.
+    * esp_mail_file_storage_type_none,
+    * esp_mail_file_storage_type_flash, and 
+    * esp_mail_file_storage_type_sd 
+  */
+  config.storage.type = esp_mail_file_storage_type_none;
 
-    /** Set to download heades, text and html messaeges, 
-     * attachments and inline images respectively.
-    */
-    config.download.header = true;
-    config.download.text = false;
-    config.download.html = false;
-    config.download.attachment = false;
-    config.download.inlineImg = false;
+  /** Set to download heades, text and html messaeges, 
+    * attachments and inline images respectively.
+  */
+  config.download.header = true;
+  config.download.text = false;
+  config.download.html = false;
+  config.download.attachment = false;
+  config.download.inlineImg = false;
 
-    /** Set to enable the results i.e. html and text messaeges 
-     * which the content stored in the IMAPSession object is limited
-     * by the option config.limit.msg_size.
-     * The whole message can be download through config.download.text
-     * or config.download.html which not depends on these enable options.
-    */
-    config.enable.html = true;
-    config.enable.text = true;
+  /** Set to enable the results i.e. html and text messaeges 
+    * which the content stored in the IMAPSession object is limited
+    * by the option config.limit.msg_size.
+    * The whole message can be download through config.download.text
+    * or config.download.html which not depends on these enable options.
+  */
+  config.enable.html = true;
+  config.enable.text = true;
 
-    /* Set to enable the sort the result by message UID in the ascending order */
-    config.enable.recent_sort = true;
+  /* Set to enable the sort the result by message UID in the ascending order */
+  config.enable.recent_sort = true;
 
-    /* Set to report the download progress via the default serial port */
-    config.enable.download_status = true;
+  /* Set to report the download progress via the default serial port */
+  config.enable.download_status = true;
 
-    /* Header fields parsing is case insensitive by default to avoid uppercase header in some server e.g. iCloud
-    , to allow case sensitive parse, uncomment below line*/
-    //config.enable.header_case_sensitive = true;
+  /* Header fields parsing is case insensitive by default to avoid uppercase header in some server e.g. iCloud
+  , to allow case sensitive parse, uncomment below line*/
+  //config.enable.header_case_sensitive = true;
 
-    /* Set the limit of number of messages in the search results */
-    config.limit.search = 5;
+  /* Set the limit of number of messages in the search results */
+  config.limit.search = 5;
 
-    /** Set the maximum size of message stored in 
-     * IMAPSession object in byte
-    */
-    config.limit.msg_size = 512;
+  /** Set the maximum size of message stored in 
+    * IMAPSession object in byte
+  */
+  config.limit.msg_size = 512;
 
-    /** Set the maximum attachments and inline images files size
-     * that can be downloaded in byte. 
-     * The file which its size is largger than this limit may be saved 
-     * as truncated file.
-    */
-    config.limit.attachment_size = 1024 * 1024 * 5;
+  /** Set the maximum attachments and inline images files size
+    * that can be downloaded in byte. 
+    * The file which its size is largger than this limit may be saved 
+    * as truncated file.
+  */
+  config.limit.attachment_size = 1024 * 1024 * 5;
 
 
-    /* Connect to server with the session and config */
-    if (!imap.connect(&session, &config))
-        return;
+  /* Connect to server with the session and config */
+  if (!imap.connect(&session, &config))
+      return;
 
-    /*  {Optional} */
-    // printAllMailboxesInfo(imap);
+  /*  {Optional} */
+  // printAllMailboxesInfo(imap);
 
-    /* Open or select the mailbox folder to read or search the message */
-    if (!imap.selectFolder("INBOX"))
-        return;
+  /* Open or select the mailbox folder to read or search the message */
+  if (!imap.selectFolder("INBOX"))
+      return;
 
-    /*  {Optional} */
-    // printSelectedMailboxInfo(imap.selectedFolder());
+  /*  {Optional} */
+  // printSelectedMailboxInfo(imap.selectedFolder());
+}
 
+void EmailClient::updateEmails(void) {
     /** Message UID to fetch or read e.g. 100. SSLSSL
      * In this case we will get the UID from the max message number (lastest message) 
     */
@@ -152,10 +171,7 @@ void EmailClient::updateEmails(void) {
     //When message was fetched or read, the /Seen flag will not set or message remained in unseen or unread status,
     //as this is the purpose of library (not UI application), user can set the message status as read by set \Seen flag
     //to message, see the Set_Flags.ino example.
-    MailClient.readMail(&imap);
-
-    /* Clear all stored data in IMAPSession object */
-    imap.empty();
+    MailClient.readMail(&imap, false);
 
 }
 
