@@ -49,7 +49,7 @@ static const unsigned char PROGMEM logo_bmp[] =
 const int servoPin = 18; // Servo data pulse pin 
 int server_pos = 90;
 Servo myservo;
-
+/*
 void setup() {
   Serial.begin(9600);
 
@@ -71,18 +71,12 @@ void setup() {
 
 void loop() { //128x32
   
-/*
-  servo_test();
-
-  String test("this is a longer testing string");
-  scroll_banner(test);
-  display.clearDisplay();
-  display.display();
-  delay(500);
-  */
+  
   notify("here is a full test string");
 
 }
+*/
+
 
 void notify(String info)
 {
