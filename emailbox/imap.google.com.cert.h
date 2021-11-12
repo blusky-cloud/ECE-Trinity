@@ -1,5 +1,18 @@
+<<<<<<< Updated upstream
 const char* cert = R"==(
 -----BEGIN CERTIFICATE-----
+=======
+<<<<<<< HEAD
+// This is the public SSL/TLS certificate for imap.google.com which
+// the SSL library uses to verify that the server is who it says it is
+// Generated from `openssl s_client -showcerts imap.gmail.com:993`
+const char* ca_cert = \
+R"==(-----BEGIN CERTIFICATE-----
+=======
+const char* cert = R"==(
+-----BEGIN CERTIFICATE-----
+>>>>>>> a2b6bcb475e4a89f078a35b15a61e9dda50acbf8
+>>>>>>> Stashed changes
 MIIFYjCCBEqgAwIBAgIQd70NbNs2+RrqIQ/E8FjTDTANBgkqhkiG9w0BAQsFADBX
 MQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEQMA4GA1UE
 CxMHUm9vdCBDQTEbMBkGA1UEAxMSR2xvYmFsU2lnbiBSb290IENBMB4XDTIwMDYx
@@ -29,5 +42,14 @@ WprKASOshIArAoyZl+tJaox118fessmXn1hIVw41oeQa1v1vg4Fv74zPl6/AhSrw
 9U5pCZEt4Wi4wStz6dTZ/CLANx8LZh1J7QJVj2fhMtfTJr9w4z30Z209fOU0iOMy
 +qduBmpvvYuR7hZL6Dupszfnw0Skfths18dG9ZKb59UhvmaSGZRVbNQpsg3BZlvi
 d0lIKO2d1xozclOzgjXPYovJJIultzkMu34qQb9Sz/yilrbCgj8=
+<<<<<<< Updated upstream
 -----END CERTIFICATE-----
 )=="
+=======
+<<<<<<< HEAD
+-----END CERTIFICATE-----)==";
+=======
+-----END CERTIFICATE-----
+)=="
+>>>>>>> a2b6bcb475e4a89f078a35b15a61e9dda50acbf8
+>>>>>>> Stashed changes
