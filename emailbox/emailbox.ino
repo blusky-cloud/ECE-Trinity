@@ -8,7 +8,7 @@
 // Include the debugger stuff
 #include "src/debug/debugger.h"
 #include "src/email/email.h"
-#include "a_flag_functions_oled_servo.cpp"
+#include "a_flag_functions_oled_servo.h"
 
 // This is the debugger object itself
 Debugger debug;
@@ -24,19 +24,7 @@ void scroll_banner(String text, int reps);
 // No additional setup is required.
 void setup() {
 
-  myservo.attach(servoPin);
-
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-
-  // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(1000); // Pause for 2 seconds
-  display.clearDisplay();
+  setupPeripherals();
   
   // no email errors here please
   email.begin(); // This must be called here
