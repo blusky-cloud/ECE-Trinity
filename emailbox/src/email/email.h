@@ -32,12 +32,13 @@ class EmailClient {
   public:
     EmailClient(Debugger* dbg);
     void begin(void);                                 // Sets up the object. Should only be needed once
-    bool isConnected(void);                               // Checks if the connection is still active
-    bool connect(void);                                   // Connects to the IMAP server. Should be called anytime the server disconnects.
-    void logout(void)                                 // Logs out of the IMAP server. You can later log in again with connect().
+    bool isConnected(void);                           // Checks if the connection is still active
+    bool connect(void);                               // Connects to the IMAP server. Should be called anytime the server disconnects.
+    void logout(void);                                // Logs out of the IMAP server. You can later log in again with connect().
     void refresh(void);                               // Updates the latest unread subject variables
     bool hasUnseen(void);                             // Gets wether there are unseen messages in the inbox
     void getLatestSubject(char* whereToPut);          // Gets the subject line of the latest unseen message
+    void getLatestFrom(char* whereToPut);             // Gets the sender of the latest unseen message
     void issueCommand(char* tag, char* command);      // Issues an IMAP command. Does not wait for response
     bool executeCommand(char* tag, char* command);    // Issues an IMAP command and waits for the response
     void readLine(void);                              // Reads the next line of the IMAP response to the response variable
@@ -50,7 +51,8 @@ class EmailClient {
     bool printIMAPresponses = false;                  // Wether or not to print the IMAP responses
     char response[MAX_IMAP_RESPONSE_LENGTH];          // The latest processed IMAP response
     bool hasUnread;                                   // If there are unread messages in the inbox
-    char lastUnread[MAX_EMAIL_SUBJECT_LENGTH];        // The subject line of the latest unread message
+    char lastUnreadSubj[MAX_EMAIL_SUBJECT_LENGTH];    // The subject line of the latest unread message
+    char lastUnreadFrom[MAX_EMAIL_SUBJECT_LENGTH];    // The sender of the latest unread message
     // Check if a string has been found. Used to find the end of the IMAP responses.
     bool found(const char* last, const char* search, int lastlength, int searchlength);
 };

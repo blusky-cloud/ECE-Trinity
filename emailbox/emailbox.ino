@@ -26,7 +26,9 @@ void setup() {
   if(email.hasUnseen()) {
     char subj[MAX_EMAIL_SUBJECT_LENGTH];
     email.getLatestSubject(subj);
-    Serial.printf("Latest Unread: %s\n", subj);
+    char from[MAX_EMAIL_SUBJECT_LENGTH];
+    email.getLatestFrom(from);
+    Serial.printf("Latest Unread: %s: %s\n", from, subj);
   } else {
     Serial.println("No unread messages.");
   }

@@ -55,7 +55,7 @@ void emailCommand(int argc, char* argv[], Debugger* dbg) {
   if(argc < 2) {
     // email.updateEmails();
   } else {
-    } else if(!strcmp(argv[1], "connect")) {      // Connect to the IMAP server. Does not check if the connection already exists.
+    if(!strcmp(argv[1], "connect")) {      // Connect to the IMAP server. Does not check if the connection already exists.
       DEBUG_SERIAL.println("Connecting ...");
       email.connect();
     } else if(!strcmp(argv[1], "refresh")) {      // Refreshes the mailbox
@@ -194,24 +194,37 @@ void EmailClient::refresh(void) {
 
     // Get the unseen message's subject line
     char cmd[MAX_IMAP_COMMAND_LENGTH];
-    sprintf(cmd, "FETCH %d BODY.PEEK[HEADER.FIELDS (SUBJECT)]", id);
+    sprintf(cmd, "FETCH %d BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]", id);
     executeCommand("fth", cmd);
 
     p = response;
-    char tempsubj[MAX_EMAIL_SUBJECT_LENGTH];
-    char* q = tempsubj;
+    char* q = lastUnreadSubj;
+    char* f = lastUnreadFrom;
     while(*p++ != '\n' && *p != '\r') {} // Skip the first line
     while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the second line
-    p += 9; // Skip the beginning of the line
-    while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
-      *q = *p;
-      q++; p++;
+    for(int i = 0; i < 2; i++) {// For each field
+      p++;
+      if(found(p, "From:", 5, 5)) { // If it's the FROM field
+        p += 6; // Skip the beginning of the line
+        while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
+          *f = *p;
+          f++; p++;
+        }
+        *f = '\0';
+      } else if(found(p, "Subject:", 8, 8)) { // If it's the subject field
+        p += 9; // Skip the beginning of the line
+        while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
+          *q = *p;
+          q++; p++;
+        }
+        *q = '\0';
+      }
+      while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the next line
     }
-    *q = '\0';
-    sprintf(lastUnread, "%s", tempsubj); // Format the subject (and soon author) to the subject field.
   } else {
     hasUnread = false;
-    lastUnread[0] = '\0';
+    lastUnreadSubj[0] = '\0';
+    lastUnreadFrom[0] = '\0';
   } 
 }
 
@@ -227,7 +240,15 @@ bool EmailClient::hasUnseen(void) {
  * Copies it to whereToPut
  */
 void EmailClient::getLatestSubject(char* whereToPut) {
-  strcpy(whereToPut, lastUnread);
+  strcpy(whereToPut, lastUnreadSubj);
+}
+
+/*
+ * Gets the sender of the latest unseen message.
+ * Copies it to whereToPut
+ */
+void EmailClient::getLatestFrom(char* whereToPut) {
+  strcpy(whereToPut, lastUnreadFrom);
 }
 
 /*
@@ -250,7 +271,61 @@ void EmailClient::issueCommand(char* tag, char* command) {
     sprintf(cmd, "%s %s" END_IMAP_COMMAND, tag, command); // Format the command
     client.print(cmd); // Send the command to the IMAP server
     if(printIMAPresponses) {
-      DEBUG_SERIAL.printf("C: > %s", cmd);
+      // Censor credentials in LOGIN command so they don't get logged
+      if(found(command, "LOGIN", 5, 5)) {
+        char cpy[MAX_IMAP_COMMAND_LENGTH];
+        char* cmptr = cmd;
+        char* cpptr = cpy;
+        // Copy the tag and the command
+        for(int i = 0; i < 2; i++) {        
+          while(*cmptr != ' ') {
+            *cpptr = *cmptr;
+            cpptr++; cmptr++;
+          }
+          *cpptr = *cmptr;
+          cpptr++; cmptr++;
+        }
+        // Copy the first 3 letters of the email address
+        for(int i = 0; i < 3; i++) {        
+          if(*cmptr != '@') { // If the email address is less than 4 characters, nothing will be censored
+            *cpptr = *cmptr;
+            cpptr++; cmptr++;
+          } else {
+            break;
+          }
+        }
+        // Add 3 astrisks
+        for(int i = 0; i < 3; i++) {        
+            *cpptr = '*';
+            cpptr++;
+        }
+        // Find the @ symbol in the email address
+        while(*cmptr != '@') {
+          cmptr++;
+        }
+        // Copy the @ symbol
+        *cpptr = *cmptr;
+        cpptr++; cmptr++;
+        // Copy the domain up to the spacec
+        while(*cmptr != ' ') {
+          *cpptr = *cmptr;
+          cpptr++; cmptr++;
+        }
+        // Copy the space
+        *cpptr = *cmptr;
+        cpptr++; cmptr++;
+        // Add 7 astrisks for the password
+        for(int i = 0; i < 7; i++) {        
+            *cpptr = '*';
+            cpptr++;
+        }
+        // Add null terminator
+        *cpptr = '\0';
+
+        DEBUG_SERIAL.printf("C: > %s\n", cpy);
+      } else {
+        DEBUG_SERIAL.printf("C: > %s", cmd);
+      }
     }
   }
 }
