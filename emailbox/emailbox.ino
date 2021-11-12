@@ -8,10 +8,18 @@
 // Include the debugger stuff
 #include "src/debug/debugger.h"
 #include "src/email/email.h"
+#include "a_flag_functions_oled_servo.cpp"
 
 // This is the debugger object itself
 Debugger debug;
 EmailClient email(&debug);
+
+//prototypes
+void notify(String text);
+void raise_flag();
+void lower_flag();
+void reset_flag(int reset);
+void scroll_banner(String text, int reps);
 
 // No additional setup is required.
 void setup() {

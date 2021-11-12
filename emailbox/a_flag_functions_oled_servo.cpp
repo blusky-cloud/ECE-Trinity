@@ -49,6 +49,13 @@ static const unsigned char PROGMEM logo_bmp[] =
 const int servoPin = 18; // Servo data pulse pin 
 int server_pos = 90;
 Servo myservo;
+
+void notify(String text);
+void raise_flag();
+void lower_flag();
+void reset_flag(int reset);
+void scroll_banner(String text, int reps);
+
 /*
 void setup() {
   Serial.begin(9600);
@@ -76,7 +83,6 @@ void loop() { //128x32
 
 }
 */
-
 
 void notify(String info)
 {
