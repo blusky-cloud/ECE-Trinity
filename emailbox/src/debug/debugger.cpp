@@ -92,6 +92,7 @@ void Debugger::read(void) {
         DebugCommand dc = commands[i];
         if(strcmp(dc.name, parts[0]) == 0) {
           dc.exec(num, parts, this);
+          DEBUG_SERIAL.println("Done");          
           return; // Leave. There may be some stuff left in the hardware buffer, but that's fine. We'll get to it next time
         }
       }
@@ -134,5 +135,16 @@ void Debugger::registerCommand(char* name, void(*exec)(int, char**, Debugger*)) 
     commands[numDebugCommands++] = dc;
   } else {
     DEBUG_SERIAL.println("I'm sorry, I'm afraid I can't do that. (debug command storage full, change the size in debugger.h)");
+  }
+}
+
+void printCharArray(char* arr, int len) {
+  for(int i = 0; i < len; i++) {
+    if(arr[i] > 0x20 && arr[i] < 0x7F) {
+      DEBUG_SERIAL.printf("[%c] ", arr[i]);
+    } else {
+      DEBUG_SERIAL.print(arr[i], HEX);
+      DEBUG_SERIAL.print(' ');
+    }
   }
 }

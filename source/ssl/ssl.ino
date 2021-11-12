@@ -64,7 +64,7 @@ d0lIKO2d1xozclOzgjXPYovJJIultzkMu34qQb9Sz/yilrbCgj8=
 -----END CERTIFICATE-----)==";
 
 /* create an instance of WiFiClientSecure */
-WiFiClientSecure client;
+
 
 void setup() {
   Serial.begin(115200);

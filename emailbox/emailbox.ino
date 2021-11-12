@@ -17,7 +17,17 @@ EmailClient email(&debug);
 void setup() {
   // no email errors hree please
   email.begin();
+  email.connect();
   email.refresh();
+  Serial.println("Ready");
+
+  if(email.hasUnseen()) {
+    char subj[MAX_EMAIL_SUBJECT_LENGTH];
+    email.getLatestSubject(subj);
+    Serial.printf("Latest Unread: %s\n", subj);
+  } else {
+    Serial.println("No unread messages.");
+  }
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing
