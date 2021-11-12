@@ -10,10 +10,13 @@
 
 #include <WiFi.h>
 
+/*
+ * Debug command to print the list of currently available debug commands
+ */ 
 void help(int argc, char* argv[], Debugger* dbg) {
-  Serial.printf("There are %d commands:\n");
+  DEBUG_SERIAL.printf("There are %d commands:\n");
   for(int i = 0; i < dbg->numDebugCommands; i++) {
-    Serial.printf("\t%s\n", dbg->commands[i].name);
+    DEBUG_SERIAL.printf("\t%s\n", dbg->commands[i].name);
   }
 }
 

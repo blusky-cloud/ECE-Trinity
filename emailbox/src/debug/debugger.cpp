@@ -127,7 +127,7 @@ void Debugger::println(char* str) {
  * See defaultcmds.cpp for example implementations.
  */
 void Debugger::registerCommand(char* name, void(*exec)(int, char**, Debugger*)) {
-  Serial.printf("Adding command %s\n", name);
+  DEBUG_SERIAL.printf("Adding command %s\n", name);
   if(numDebugCommands < DEBUG_MAX_COMMANDS) {
     DebugCommand dc;
     dc.name = name;
@@ -138,7 +138,11 @@ void Debugger::registerCommand(char* name, void(*exec)(int, char**, Debugger*)) 
   }
 }
 
-void printCharArray(char* arr, int len) {
+/*
+ * Prints a character array as individual items. Prints printable characters in [square] brackets,
+ * and anything not printable as hex values, everything seperated by spacecs.
+ */ 
+void Debugger::printCharArray(char* arr, int len) {
   for(int i = 0; i < len; i++) {
     if(arr[i] > 0x20 && arr[i] < 0x7F) {
       DEBUG_SERIAL.printf("[%c] ", arr[i]);

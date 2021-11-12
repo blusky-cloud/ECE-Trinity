@@ -15,12 +15,14 @@ EmailClient email(&debug);
 
 // No additional setup is required.
 void setup() {
-  // no email errors hree please
-  email.begin();
-  email.connect();
-  email.refresh();
+  // no email errors here please
+  email.begin(); // This must be called here
+  email.connect(); // This probably should be called here, although is not required
+
   Serial.println("Ready");
 
+  // Everything else is optional, and is an example of email usage
+  email.refresh();
   if(email.hasUnseen()) {
     char subj[MAX_EMAIL_SUBJECT_LENGTH];
     email.getLatestSubject(subj);

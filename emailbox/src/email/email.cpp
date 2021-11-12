@@ -2,6 +2,8 @@
  *
  * Creates an IMAP connection to a mail server (as specified in credentials.h)
  * and helps with a few basic uses, like getting the latest unread email.
+ *
+ * Author: Benjamin Crall 
  */
 
 #include "./email.h"
@@ -31,8 +33,12 @@
  *   <tag> SEARCH UNSEEN
  * 
  *   Get email header
- *   <tab> FETCH <number> BODY.PEEK[HEADER.FIELDS (SUBJECT)]
-*/
+ *   <tag> FETCH <number> BODY.PEEK[HEADER.FIELDS (SUBJECT)]
+ * 
+ * On logout
+ *   To log out:
+ *   <tag> LOGOUT
+ */
 
 // Uncomment this line to print more verbose debug info
 // #define VERBOSE_DEBUG
@@ -49,32 +55,32 @@ void emailCommand(int argc, char* argv[], Debugger* dbg) {
   if(argc < 2) {
     // email.updateEmails();
   } else {
-    } else if(!strcmp(argv[1], "connect")) {
-      Serial.println("Connecting ...");
+    } else if(!strcmp(argv[1], "connect")) {      // Connect to the IMAP server. Does not check if the connection already exists.
+      DEBUG_SERIAL.println("Connecting ...");
       email.connect();
-    } else if(!strcmp(argv[1], "refresh")) {
-      Serial.println("Refreshing ...");
+    } else if(!strcmp(argv[1], "refresh")) {      // Refreshes the mailbox
+      DEBUG_SERIAL.println("Refreshing ...");
       email.refresh();
-    } else if(!strcmp(argv[1], "logout")) {
-      Serial.println("Logging out");
+    } else if(!strcmp(argv[1], "logout")) {       // Logs out of the IMAP server. Not needed normally
+      DEBUG_SERIAL.println("Logging out");
       email.logout();
-    } else if(!strcmp(argv[1], "check")) {
+    } else if(!strcmp(argv[1], "check")) {        // Prints the status of the mailbox
       if(email.hasUnseen()) {
         char subj[MAX_EMAIL_SUBJECT_LENGTH];
         email.getLatestSubject(subj);
-        Serial.printf("Latest Unread: %s\n", subj);
+        DEBUG_SERIAL.printf("Latest Unread: %s\n", subj);
       } else {
-        Serial.println("No unread messages.");
+        DEBUG_SERIAL.println("No unread messages.");
       }
-    } else if(!strcmp(argv[1], "printIMAP")) {
+    } else if(!strcmp(argv[1], "printIMAP")) {     // Enables printing the IMAP debug info
       email.setPrintIMAPresponses(true);
-    } else if(!strcmp(argv[1], "silentIMAP")) {
+    } else if(!strcmp(argv[1], "silentIMAP")) {    // Disables printing the IMAP debug info
       email.setPrintIMAPresponses(false);
-    } else if(!strcmp(argv[1], "help")) {
-      Serial.println("email commands: connect, refresh, logout, check, printIMAP, silentIMAP, help");
+    } else if(!strcmp(argv[1], "help")) {          // Prints a help message
+      DEBUG_SERIAL.println("email commands: connect, refresh, logout, check, printIMAP, silentIMAP, help");
     } else {
-      Serial.print("No can do da thingy "); 
-      Serial.println(argv[1]); 
+      DEBUG_SERIAL.print("No can do da thingy "); 
+      DEBUG_SERIAL.println(argv[1]); 
     }
   }
 }
@@ -95,24 +101,23 @@ EmailClient::EmailClient(Debugger* dbgr) {
  *    are stored in credentials.h
  */
 void EmailClient::begin(void) {
-  
+  // Register the email debug command
   dbg->registerCommand("email", &emailCommand);
 
-  Serial.print("Connecting to AP");
-
+  // Connect to WiFi
+  DEBUG_SERIAL.print("Connecting to AP");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-      // Serial.print(WiFi.status());
-      Serial.print('.');
+  while (WiFi.status() != WL_CONNECTED) {
+      DEBUG_SERIAL.print('.');
       delay(250);
   }
-
-  Serial.println("");
-  Serial.printf("WiFi connected to %s\n", WIFI_SSID);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.println();
+  
+  // Print WiFi stats
+  DEBUG_SERIAL.println("");
+  DEBUG_SERIAL.printf("WiFi connected to %s\n", WIFI_SSID);
+  DEBUG_SERIAL.print("IP address: ");
+  DEBUG_SERIAL.println(WiFi.localIP());
+  DEBUG_SERIAL.println();
 }
 
 /*
@@ -132,14 +137,17 @@ bool EmailClient::connect(void) {
   /* set SSL/TLS certificate */
   client.setCACert(ca_cert);
 
-  Serial.printf("Connecting to %s via port %d\n", IMAP_HOST, IMAP_PORT);
+  // Try to connect to the IMAP server
+  DEBUG_SERIAL.printf("Connecting to %s via port %d\n", IMAP_HOST, IMAP_PORT);
   if (!client.connect(IMAP_HOST, IMAP_PORT)){
-    Serial.println("Connection failed!");
+    // If not connected, say so
+    DEBUG_SERIAL.println("Connection failed!");
     return false;
   } else {
-    Serial.println("Connected to server!");
+    // If connected, log in and select the mailbox
+    DEBUG_SERIAL.println("Connected to server!");
     readLine();
-    Serial.println("Logging in ...");
+    DEBUG_SERIAL.println("Logging in ...");
     executeCommand("gah", "LOGIN " EMAIL_ADDRESS " " EMAIL_PASSWORD);
     executeCommand("ibx", "SELECT INBOX");
     return true;
@@ -148,6 +156,7 @@ bool EmailClient::connect(void) {
 
 /*
  * Logs out of the IMAP server. You can log in again later with connect()
+ * This is not needed normally.
  */
 void EmailClient::logout(void) {
   executeCommand("lgo", "LOGOUT");
@@ -159,44 +168,47 @@ void EmailClient::logout(void) {
  *    hasUnread and lastUnread fields.
  */
 void EmailClient::refresh(void) {
-  Serial.println("Reading messages ...");
-  executeCommand("rfh", "NOOP");
+  // Read the messages
+  DEBUG_SERIAL.println("Reading messages ...");
+  executeCommand("rfh", "NOOP"); // Reload the IMAP inbox.
   executeCommand("src", "SEARCH UNSEEN");
-  char* p = response;
 
-  while(*p++ != '\n' && *p != '\r') {}
+  // Find the ID of the latest unseen message with some string/pointer magic
+  char* p = response;
+  while(*p++ != '\n' && *p != '\r') {} // Find the end of the line
   p--;
+
   int dts = 0;
   int id = 0;
   int mlt = 1;
-  
-  while(*p >= '0' && *p <= '9') {
+  while(*p >= '0' && *p <= '9') { // Work backwards reading the last number in the line
     dts++;
     id += (*p - '0') * mlt;
     mlt *= 10;
     p--;
   }
 
+  // If we cound an ID, then there is at least one unseen message
   if(dts > 0) {
     hasUnread = true;
-    // <tab> FETCH <number> 
+
+    // Get the unseen message's subject line
     char cmd[MAX_IMAP_COMMAND_LENGTH];
     sprintf(cmd, "FETCH %d BODY.PEEK[HEADER.FIELDS (SUBJECT)]", id);
     executeCommand("fth", cmd);
 
     p = response;
-    
     char tempsubj[MAX_EMAIL_SUBJECT_LENGTH];
     char* q = tempsubj;
-    while(*p++ != '\n' && *p != '\r') {}
-    while(*p++ == '\n' || *p == '\r') {}
-    p += 9;
-    while(*p != '\n' && *p != '\r') {
+    while(*p++ != '\n' && *p != '\r') {} // Skip the first line
+    while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the second line
+    p += 9; // Skip the beginning of the line
+    while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
       *q = *p;
       q++; p++;
     }
     *q = '\0';
-    sprintf(lastUnread, "%s", tempsubj);
+    sprintf(lastUnread, "%s", tempsubj); // Format the subject (and soon author) to the subject field.
   } else {
     hasUnread = false;
     lastUnread[0] = '\0';
@@ -231,14 +243,14 @@ void EmailClient::getLatestSubject(char* whereToPut) {
  */ 
 void EmailClient::issueCommand(char* tag, char* command) {
   if(!isConnected()) {
-    connect();
+    connect(); // Connect if needed
   }
   if(isConnected()) {
     char cmd[MAX_IMAP_COMMAND_LENGTH];
-    sprintf(cmd, "%s %s" END_IMAP_COMMAND, tag, command);
-    client.print(cmd);
+    sprintf(cmd, "%s %s" END_IMAP_COMMAND, tag, command); // Format the command
+    client.print(cmd); // Send the command to the IMAP server
     if(printIMAPresponses) {
-      Serial.printf("C: > %s", cmd);
+      DEBUG_SERIAL.printf("C: > %s", cmd);
     }
   }
 }
@@ -267,22 +279,25 @@ void EmailClient::readLine(void) {
   char c = 'q';
   int savedChars = 0;
 
+  // Keep going until we find the end of the line
   while(c != '\n') {
     if(client.available()) {
       c = client.read();
-    #ifdef VERBOSE_DEBUG
-      Serial.write(c);
-    #endif
+#ifdef VERBOSE_DEBUG
+      DEBUG_SERIAL.write(c);
+#endif
+      // Save the line to the response field
       if(savedChars < MAX_IMAP_RESPONSE_LENGTH-1) {
         response[savedChars++] = c;
       }
     }
   }
 
+  // Terminate the response field
   response[savedChars] = '\0';  
 
   if(printIMAPresponses) {
-    Serial.print(response);
+    DEBUG_SERIAL.print(response);
   }
 }
 
@@ -294,7 +309,7 @@ void EmailClient::readPrintLine(void) {
   while(c != '\n') {
     if(client.available()) {
       c = client.read();
-      Serial.write(c);
+      DEBUG_SERIAL.write(c);
     }
   }
 }
@@ -306,10 +321,12 @@ void EmailClient::readPrintLine(void) {
  * tag must be a pointer c style string with 3 characters + a null.
  */ 
 bool EmailClient::readToEnd(char* tag) {
+  // Create the string to search for for the "OK" response
   char findOK[7];
   strcpy(findOK, tag);
   strcat(findOK, " OK");
 
+  // Create the string to search for for the "BAD" response
   char findBAD[8];
   strcpy(findBAD, tag);
   strcat(findBAD, " BAD");
@@ -317,58 +334,64 @@ bool EmailClient::readToEnd(char* tag) {
   const int okLength = 6;
   const int badLength = 7;
 
+  // Create a buffer to hold part of the line. Probably could be done better, but I didn't, so too bad.
   const int lastsize = 7;
   char lasttxt[lastsize+1];
   lasttxt[lastsize] = '\0';
 #ifdef VERBOSE_DEBUG
-  Serial.printf("{%s:%d\t\t%s:%d\t\t%d}\n", findOK, okLength, findBAD, badLength, lastsize);
+  DEBUG_SERIAL.printf("{%s:%d\t\t%s:%d\t\t%d}\n", findOK, okLength, findBAD, badLength, lastsize);
 #endif
 
+  // Pay attention to where we are in the line
   int linepos = 0;
   bool foundend = false;
   bool status = false;
-
-  char c = 'q';
-
   int savedChars = 0;
 
+  char c = 'q';
+  // Keep going until the new linne after the end of the response
   while(!foundend || c != '\n') {
     if(client.available()) {
       c = client.read();
 #ifdef VERBOSE_DEBUG
-      Serial.write(c);
+      DEBUG_SERIAL.write(c);
 #endif
+      // Save the character to the response, unless the response is too long, then don't.
       if(savedChars < MAX_IMAP_RESPONSE_LENGTH-1) {
         response[savedChars++] = c;
       }
 
-      if(c == '\n' || c == '\r') {
+      // If this character is the end of the line
+      if(c == '\n' || c == '\r') { // since IMAP uses /r/n for line endings
         linepos = -1;
       } else {
         linepos++;
       }
 
+      // If we haven't found the end of the response,
+      // and are in the part of the line where we might find the indiciator
       if(!foundend && linepos >= 0 && linepos <= lastsize+1) {
-      
         for(int i = 0; i < lastsize-1; i++) {
           lasttxt[i] = lasttxt[i+1];
         }
         lasttxt[lastsize-1] = c;
 
+        // Check if we have the "OK" response
         if(linepos == okLength || linepos+1 == okLength) {
           if(found(lasttxt, findOK, lastsize, okLength)) {
             foundend = true;
             status = true;
 #ifdef VERBOSE_DEBUG
-            Serial.print("($)");
+            DEBUG_SERIAL.print("($)");
 #endif
           }
-        }        
+        }     
+        // Check if we have the "BAD" response   
         if(!foundend && (linepos == badLength || linepos+1 == badLength)) {
           if(found(lasttxt, findBAD, lastsize, badLength)) {
             foundend = true;
 #ifdef VERBOSE_DEBUG
-            Serial.print("(!)");
+            DEBUG_SERIAL.print("(!)");
 #endif
           }
         }
@@ -376,10 +399,11 @@ bool EmailClient::readToEnd(char* tag) {
     }
   }
 
+  // Terminate the response string
   response[savedChars] = '\0';  
 
   if(printIMAPresponses) {
-    Serial.print(response);
+    DEBUG_SERIAL.print(response);
   }
 
   return status;
@@ -397,22 +421,25 @@ void EmailClient::setPrintIMAPresponses(bool toPrint) {
  */ 
 bool EmailClient::found(const char* last, const char* search, int lastlength, int searchlength) {
 #ifdef VERBOSE_DEBUG
-  Serial.printf("[%s:%d\t\t%s:%d]", last, strlen(last), search, searchlength);
+  DEBUG_SERIAL.printf("[%s:%d\t\t%s:%d]", last, strlen(last), search, searchlength);
 #endif
 
+  // Check if the line length is at least as long as the search length
   if(searchlength <= lastlength) {
     int laststart = lastlength - searchlength;
     int count = 0;
 
+    // Check if the end of the line matches the search string
     for(int i = 0; i < searchlength; i++) {
       if(last[laststart + i] != search[i]) {
         return false;
       }
     }
 
+    // If we got here, it must match
     return true;
-  
   } else {
+    // The line lengths were wrong, so exit
     return false;
   }
 }

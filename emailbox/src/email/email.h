@@ -2,6 +2,8 @@
  *
  * Creates an IMAP connection to a mail server (as specified in credentials.h)
  * and helps with a few basic uses, like getting the latest unread email.
+ *
+ * Author: Benjamin Crall 
  */
 
 #ifndef EMAIL_H
