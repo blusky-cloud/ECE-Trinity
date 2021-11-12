@@ -13,7 +13,7 @@
 #include <Arduino.h>
 
 #include "./debugger.h"
-#include "./defaultcmds.h"
+#include "./defaultcmds.h":
 
 /*
  * Initializes the debugger.
@@ -37,7 +37,8 @@ Debugger::Debugger(void) {
   registerCommand("light", &light);
   registerCommand("lumos", &lumos);
   registerCommand("nox", &nox);
-  
+  registerCommand("mac_address", &mac_address);
+  registerCommand("help", &help);
   // Let's go!
   DEBUG_SERIAL.println("Debugger running");
 }
@@ -90,7 +91,8 @@ void Debugger::read(void) {
       for(int i = 0; i < numDebugCommands; i++) {
         DebugCommand dc = commands[i];
         if(strcmp(dc.name, parts[0]) == 0) {
-          dc.exec(num, parts);
+          dc.exec(num, parts, this);
+          DEBUG_SERIAL.println("Done");          
           return; // Leave. There may be some stuff left in the hardware buffer, but that's fine. We'll get to it next time
         }
       }
@@ -124,7 +126,8 @@ void Debugger::println(char* str) {
  *    which allows for multiple commands to use the same handler function if you want)
  * See defaultcmds.cpp for example implementations.
  */
-void Debugger::registerCommand(char* name, void(*exec)(int, char**)) {
+void Debugger::registerCommand(char* name, void(*exec)(int, char**, Debugger*)) {
+  DEBUG_SERIAL.printf("Adding command %s\n", name);
   if(numDebugCommands < DEBUG_MAX_COMMANDS) {
     DebugCommand dc;
     dc.name = name;
@@ -132,5 +135,20 @@ void Debugger::registerCommand(char* name, void(*exec)(int, char**)) {
     commands[numDebugCommands++] = dc;
   } else {
     DEBUG_SERIAL.println("I'm sorry, I'm afraid I can't do that. (debug command storage full, change the size in debugger.h)");
+  }
+}
+
+/*
+ * Prints a character array as individual items. Prints printable characters in [square] brackets,
+ * and anything not printable as hex values, everything seperated by spacecs.
+ */ 
+void Debugger::printCharArray(char* arr, int len) {
+  for(int i = 0; i < len; i++) {
+    if(arr[i] > 0x20 && arr[i] < 0x7F) {
+      DEBUG_SERIAL.printf("[%c] ", arr[i]);
+    } else {
+      DEBUG_SERIAL.print(arr[i], HEX);
+      DEBUG_SERIAL.print(' ');
+    }
   }
 }

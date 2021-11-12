@@ -16,8 +16,8 @@
  * \__, \__/ | \| |    | \__) 
  */                           
 
-// The maximum number of characters in each debug command. Limited to reduce RAM usage. Default 64
-#define DEBUG_MAX_COMMAND_LENGTH 64
+// The maximum number of characters in each debug command. Limited to reduce RAM usage. Default 256
+#define DEBUG_MAX_COMMAND_LENGTH 256
 // The maximum number of arguments in each debug command, including the command itself. Default 32
 #define DEBUG_MAX_COMMAND_ARGS 32
 // The Serial interface to use for debug commands. Default Serial
@@ -30,13 +30,15 @@
 // The maximum number of allowed Debug Commands. Soft limit to not take up too much ram. Default 16
 #define DEBUG_MAX_COMMANDS 16
 
+class Debugger;
+
 /*
  * Structure to hold the debug commands.
  * Holds the name with a pointer to the function to call.
  */
 typedef struct DebugCommand_s {
   char* name;
-  void (*exec)(int, char**);  
+  void (*exec)(int, char**, Debugger*);  
 } DebugCommand;
 
 /*
@@ -48,12 +50,13 @@ class Debugger {
     void read(void);          // Read and process commands
     void print(char* str);    // Prints to DEBUG_SERIAL
     void println(char* str);  // Prints to DEBUG_SERIAL with a newline
-    void registerCommand(char* name, void(*command)(int, char**)); // Registers a new debug command
+    void registerCommand(char* name, void(*command)(int, char**, Debugger*)); // Registers a new debug command
+    DebugCommand commands[DEBUG_MAX_COMMANDS];  // The array of possible commands
+    int numDebugCommands = 0;                   // The number of possible commands   
+    void printCharArray(char* arr, int len); 
   private:
     char cmd_buff[DEBUG_MAX_COMMAND_LENGTH+1];  // Buffer to hold part of incomming command
     int cmdBuffPtr;                             // The current writehead in the buffer
-    DebugCommand commands[DEBUG_MAX_COMMANDS];  // The array of possible commands
-    int numDebugCommands = 0;                   // The number of possible commands
 };
 
 #endif
