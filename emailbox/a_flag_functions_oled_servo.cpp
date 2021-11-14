@@ -193,5 +193,7 @@ void scroll_banner(String text, int reps)
       }
     }
   }
+
+  display.clearDisplay();
 }
 

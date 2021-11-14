@@ -23,6 +23,7 @@ void scroll_banner(String text, int reps);
 
 #define CHECK_MAILBOX_DELAY 1000
 unsigned long nextCheck = 0;
+String prev_subj("N/A");
 
 // No additional setup is required.
 void setup() {
@@ -63,13 +64,19 @@ void loop() {
       char from[MAX_EMAIL_SUBJECT_LENGTH];
       email.getLatestFrom(from);
 
-      // copy char arrays to String class for notify argument
-      String banner("New Msg From: ");
-      banner.concat(from);
-      banner.concat(", Re: ");
-      banner.concat(subj);
+      // check to make sure we aren't repeating a notification
+      String test(subj);
+      if (!prev_subj.equals(test)) {
+          // copy char arrays to String class for notify argument
+          String banner("New Msg From: ");
+          banner.concat(from);
+          banner.concat(", Re: ");
+          banner.concat(subj);
 
-      notify(banner);
+          notify(banner);
+          prev_subj = subj;
+      }
+
     }
   }
   delay(50);
