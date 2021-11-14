@@ -21,9 +21,11 @@ void lower_flag();
 void reset_flag(int reset);
 void scroll_banner(String text, int reps);
 
+#define CHECK_MAILBOX_DELAY 1000
+unsigned long nextCheck = 0;
+
 // No additional setup is required.
 void setup() {
-
   setupPeripherals();
   
   // no email errors here please
@@ -33,6 +35,7 @@ void setup() {
   Serial.println("Ready");
 
   // Everything else is optional, and is an example of email usage
+  /*
   email.refresh();
   if(email.hasUnseen()) {
     char subj[MAX_EMAIL_SUBJECT_LENGTH];
@@ -43,10 +46,31 @@ void setup() {
   } else {
     Serial.println("No unread messages.");
   }
+  */
+  nextCheck = millis();
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing
 void loop() {
-  delay(10);
   debug.read();
+
+  if(nextCheck < millis()) {
+    nextCheck += CHECK_MAILBOX_DELAY;
+    email.refresh();
+    if (email.hasUnseen()) {
+      char subj[MAX_EMAIL_SUBJECT_LENGTH];
+      email.getLatestSubject(subj);
+      char from[MAX_EMAIL_SUBJECT_LENGTH];
+      email.getLatestFrom(from);
+
+      // copy char arrays to String class for notify argument
+      String banner("New Msg From: ");
+      banner.concat(from);
+      banner.concat(", Re: ");
+      banner.concat(subj);
+
+      notify(banner);
+    }
+  }
+  delay(50);
 }

@@ -23,6 +23,9 @@
 #define MAX_IMAP_RESPONSE_LENGTH 1024
 // The line ending for the IMAP commands
 #define END_IMAP_COMMAND "\r\n"
+// The WiFi connection timeout in ms
+#define WIFI_CONNECT_TIMEOUT 30000
+
 
 // Debug email command callback
 void emailCommand(int argc, char* argv[], Debugger* dbg);
@@ -32,6 +35,7 @@ class EmailClient {
   public:
     EmailClient(Debugger* dbg);
     void begin(void);                                 // Sets up the object. Should only be needed once
+    bool isBroken(void);                              // Checks if the EmailClient is broken
     bool isConnected(void);                           // Checks if the connection is still active
     bool connect(void);                               // Connects to the IMAP server. Should be called anytime the server disconnects.
     void logout(void);                                // Logs out of the IMAP server. You can later log in again with connect().
@@ -53,6 +57,7 @@ class EmailClient {
     bool hasUnread;                                   // If there are unread messages in the inbox
     char lastUnreadSubj[MAX_EMAIL_SUBJECT_LENGTH];    // The subject line of the latest unread message
     char lastUnreadFrom[MAX_EMAIL_SUBJECT_LENGTH];    // The sender of the latest unread message
+    bool broken = false;                              // If the EmailClient is broken and will not try to do anything. Run begin() to try to fix.
     // Check if a string has been found. Used to find the end of the IMAP responses.
     bool found(const char* last, const char* search, int lastlength, int searchlength);
 };

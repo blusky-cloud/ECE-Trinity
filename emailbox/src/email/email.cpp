@@ -101,23 +101,37 @@ EmailClient::EmailClient(Debugger* dbgr) {
  *    are stored in credentials.h
  */
 void EmailClient::begin(void) {
+  broken = false;
   // Register the email debug command
   dbg->registerCommand("email", &emailCommand);
 
   // Connect to WiFi
   DEBUG_SERIAL.print("Connecting to AP");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
+  unsigned long endWifiConnect = millis() + WIFI_CONNECT_TIMEOUT;
+  while (WiFi.status() != WL_CONNECTED && endWifiConnect > millis()) {
       DEBUG_SERIAL.print('.');
       delay(250);
   }
-  
-  // Print WiFi stats
-  DEBUG_SERIAL.println("");
-  DEBUG_SERIAL.printf("WiFi connected to %s\n", WIFI_SSID);
-  DEBUG_SERIAL.print("IP address: ");
-  DEBUG_SERIAL.println(WiFi.localIP());
-  DEBUG_SERIAL.println();
+  if(endWifiConnect <= millis()) {
+    broken = true;
+    DEBUG_SERIAL.print("WiFi Connection Failed.");
+  } else {
+    // Print WiFi stats
+    DEBUG_SERIAL.println("");
+    DEBUG_SERIAL.printf("WiFi connected to %s\n", WIFI_SSID);
+    DEBUG_SERIAL.print("IP address: ");
+    DEBUG_SERIAL.println(WiFi.localIP());
+    DEBUG_SERIAL.println();
+  }
+}
+
+/*
+ * Checks if the EmailClient is broken. You may call begin() again
+ *   to try un-breaking it
+ */
+bool EmailClient::isBroken(void) {
+  return broken;  
 }
 
 /*
@@ -134,24 +148,30 @@ bool EmailClient::isConnected(void) {
  *    and can be used to restore a dead connection.
  */
 bool EmailClient::connect(void) {
-  /* set SSL/TLS certificate */
-  client.setCACert(ca_cert);
+  if(!broken) {
+    /* set SSL/TLS certificate */
+    client.setCACert(ca_cert);
 
-  // Try to connect to the IMAP server
-  DEBUG_SERIAL.printf("Connecting to %s via port %d\n", IMAP_HOST, IMAP_PORT);
-  if (!client.connect(IMAP_HOST, IMAP_PORT)){
-    // If not connected, say so
-    DEBUG_SERIAL.println("Connection failed!");
-    return false;
+    // Try to connect to the IMAP server
+    DEBUG_SERIAL.printf("Connecting to %s via port %d\n", IMAP_HOST, IMAP_PORT);
+    if (!client.connect(IMAP_HOST, IMAP_PORT)){
+      // If not connected, say so
+      DEBUG_SERIAL.println("Connection failed!");
+      broken = true;
+      return false;
+    } else {
+      // If connected, log in and select the mailbox
+      DEBUG_SERIAL.println("Connected to server!");
+      readLine();
+      DEBUG_SERIAL.println("Logging in ...");
+      executeCommand("gah", "LOGIN " EMAIL_ADDRESS " " EMAIL_PASSWORD);
+      executeCommand("ibx", "SELECT INBOX");
+      return true;
+    }
   } else {
-    // If connected, log in and select the mailbox
-    DEBUG_SERIAL.println("Connected to server!");
-    readLine();
-    DEBUG_SERIAL.println("Logging in ...");
-    executeCommand("gah", "LOGIN " EMAIL_ADDRESS " " EMAIL_PASSWORD);
-    executeCommand("ibx", "SELECT INBOX");
-    return true;
+    DEBUG_SERIAL.println("EmailClient broken, can't connect.");
   }
+  return false;
 }
 
 /*
@@ -168,64 +188,68 @@ void EmailClient::logout(void) {
  *    hasUnread and lastUnread fields.
  */
 void EmailClient::refresh(void) {
-  // Read the messages
-  DEBUG_SERIAL.println("Reading messages ...");
-  executeCommand("rfh", "NOOP"); // Reload the IMAP inbox.
-  executeCommand("src", "SEARCH UNSEEN");
+  if(!broken) {
+    // Read the messages
+    DEBUG_SERIAL.println("Reading messages ...");
+    executeCommand("rfh", "NOOP"); // Reload the IMAP inbox.
+    executeCommand("src", "SEARCH UNSEEN");
 
-  // Find the ID of the latest unseen message with some string/pointer magic
-  char* p = response;
-  while(*p++ != '\n' && *p != '\r') {} // Find the end of the line
-  p--;
-
-  int dts = 0;
-  int id = 0;
-  int mlt = 1;
-  while(*p >= '0' && *p <= '9') { // Work backwards reading the last number in the line
-    dts++;
-    id += (*p - '0') * mlt;
-    mlt *= 10;
+    // Find the ID of the latest unseen message with some string/pointer magic
+    char* p = response;
+    while(*p++ != '\n' && *p != '\r') {} // Find the end of the line
     p--;
-  }
 
-  // If we cound an ID, then there is at least one unseen message
-  if(dts > 0) {
-    hasUnread = true;
-
-    // Get the unseen message's subject line
-    char cmd[MAX_IMAP_COMMAND_LENGTH];
-    sprintf(cmd, "FETCH %d BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]", id);
-    executeCommand("fth", cmd);
-
-    p = response;
-    char* q = lastUnreadSubj;
-    char* f = lastUnreadFrom;
-    while(*p++ != '\n' && *p != '\r') {} // Skip the first line
-    while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the second line
-    for(int i = 0; i < 2; i++) {// For each field
-      p++;
-      if(found(p, "From:", 5, 5)) { // If it's the FROM field
-        p += 6; // Skip the beginning of the line
-        while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
-          *f = *p;
-          f++; p++;
-        }
-        *f = '\0';
-      } else if(found(p, "Subject:", 8, 8)) { // If it's the subject field
-        p += 9; // Skip the beginning of the line
-        while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
-          *q = *p;
-          q++; p++;
-        }
-        *q = '\0';
-      }
-      while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the next line
+    int dts = 0;
+    int id = 0;
+    int mlt = 1;
+    while(*p >= '0' && *p <= '9') { // Work backwards reading the last number in the line
+      dts++;
+      id += (*p - '0') * mlt;
+      mlt *= 10;
+      p--;
     }
+
+    // If we cound an ID, then there is at least one unseen message
+    if(dts > 0) {
+      hasUnread = true;
+
+      // Get the unseen message's subject line
+      char cmd[MAX_IMAP_COMMAND_LENGTH];
+      sprintf(cmd, "FETCH %d BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]", id);
+      executeCommand("fth", cmd);
+
+      p = response;
+      char* q = lastUnreadSubj;
+      char* f = lastUnreadFrom;
+      while(*p++ != '\n' && *p != '\r') {} // Skip the first line
+      while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the second line
+      for(int i = 0; i < 2; i++) {// For each field
+        p++;
+        if(found(p, "From:", 5, 5)) { // If it's the FROM field
+          p += 6; // Skip the beginning of the line
+          while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
+            *f = *p;
+            f++; p++;
+          }
+          *f = '\0';
+        } else if(found(p, "Subject:", 8, 8)) { // If it's the subject field
+          p += 9; // Skip the beginning of the line
+          while(*p != '\n' && *p != '\r') { // Copy the subject to tempsubj
+            *q = *p;
+            q++; p++;
+          }
+          *q = '\0';
+        }
+        while(*p++ == '\n' || *p == '\r') {} // Find the beginning of the next line
+      }
+    } else {
+      hasUnread = false;
+      lastUnreadSubj[0] = '\0';
+      lastUnreadFrom[0] = '\0';
+    } 
   } else {
-    hasUnread = false;
-    lastUnreadSubj[0] = '\0';
-    lastUnreadFrom[0] = '\0';
-  } 
+    DEBUG_SERIAL.println("EmailClient broken, can't refresh.");
+  }
 }
 
 /*
@@ -263,70 +287,74 @@ void EmailClient::getLatestFrom(char* whereToPut) {
  * command is a pointer to a c style string holding the rest of the command 
  */ 
 void EmailClient::issueCommand(char* tag, char* command) {
-  if(!isConnected()) {
-    connect(); // Connect if needed
-  }
-  if(isConnected()) {
-    char cmd[MAX_IMAP_COMMAND_LENGTH];
-    sprintf(cmd, "%s %s" END_IMAP_COMMAND, tag, command); // Format the command
-    client.print(cmd); // Send the command to the IMAP server
-    if(printIMAPresponses) {
-      // Censor credentials in LOGIN command so they don't get logged
-      if(found(command, "LOGIN", 5, 5)) {
-        char cpy[MAX_IMAP_COMMAND_LENGTH];
-        char* cmptr = cmd;
-        char* cpptr = cpy;
-        // Copy the tag and the command
-        for(int i = 0; i < 2; i++) {        
+  if(!broken) {
+    if(!isConnected()) {
+      connect(); // Connect if needed
+    }
+    if(isConnected()) {
+      char cmd[MAX_IMAP_COMMAND_LENGTH];
+      sprintf(cmd, "%s %s" END_IMAP_COMMAND, tag, command); // Format the command
+      client.print(cmd); // Send the command to the IMAP server
+      if(printIMAPresponses) {
+        // Censor credentials in LOGIN command so they don't get logged
+        if(found(command, "LOGIN", 5, 5)) {
+          char cpy[MAX_IMAP_COMMAND_LENGTH];
+          char* cmptr = cmd;
+          char* cpptr = cpy;
+          // Copy the tag and the command
+          for(int i = 0; i < 2; i++) {        
+            while(*cmptr != ' ') {
+              *cpptr = *cmptr;
+              cpptr++; cmptr++;
+            }
+            *cpptr = *cmptr;
+            cpptr++; cmptr++;
+          }
+          // Copy the first 3 letters of the email address
+          for(int i = 0; i < 3; i++) {        
+            if(*cmptr != '@') { // If the email address is less than 4 characters, nothing will be censored
+              *cpptr = *cmptr;
+              cpptr++; cmptr++;
+            } else {
+              break;
+            }
+          }
+          // Add 3 astrisks
+          for(int i = 0; i < 3; i++) {        
+              *cpptr = '*';
+              cpptr++;
+          }
+          // Find the @ symbol in the email address
+          while(*cmptr != '@') {
+            cmptr++;
+          }
+          // Copy the @ symbol
+          *cpptr = *cmptr;
+          cpptr++; cmptr++;
+          // Copy the domain up to the spacec
           while(*cmptr != ' ') {
             *cpptr = *cmptr;
             cpptr++; cmptr++;
           }
+          // Copy the space
           *cpptr = *cmptr;
           cpptr++; cmptr++;
-        }
-        // Copy the first 3 letters of the email address
-        for(int i = 0; i < 3; i++) {        
-          if(*cmptr != '@') { // If the email address is less than 4 characters, nothing will be censored
-            *cpptr = *cmptr;
-            cpptr++; cmptr++;
-          } else {
-            break;
+          // Add 7 astrisks for the password
+          for(int i = 0; i < 7; i++) {        
+              *cpptr = '*';
+              cpptr++;
           }
-        }
-        // Add 3 astrisks
-        for(int i = 0; i < 3; i++) {        
-            *cpptr = '*';
-            cpptr++;
-        }
-        // Find the @ symbol in the email address
-        while(*cmptr != '@') {
-          cmptr++;
-        }
-        // Copy the @ symbol
-        *cpptr = *cmptr;
-        cpptr++; cmptr++;
-        // Copy the domain up to the spacec
-        while(*cmptr != ' ') {
-          *cpptr = *cmptr;
-          cpptr++; cmptr++;
-        }
-        // Copy the space
-        *cpptr = *cmptr;
-        cpptr++; cmptr++;
-        // Add 7 astrisks for the password
-        for(int i = 0; i < 7; i++) {        
-            *cpptr = '*';
-            cpptr++;
-        }
-        // Add null terminator
-        *cpptr = '\0';
+          // Add null terminator
+          *cpptr = '\0';
 
-        DEBUG_SERIAL.printf("C: > %s\n", cpy);
-      } else {
-        DEBUG_SERIAL.printf("C: > %s", cmd);
+          DEBUG_SERIAL.printf("C: > %s\n", cpy);
+        } else {
+          DEBUG_SERIAL.printf("C: > %s", cmd);
+        }
       }
     }
+  } else {
+    DEBUG_SERIAL.println("EmailClient broken, can't issue command.");
   }
 }
 
@@ -342,8 +370,13 @@ void EmailClient::issueCommand(char* tag, char* command) {
  * command is a pointer to a c style string holding the rest of the command 
  */ 
 bool EmailClient::executeCommand(char* tag, char* command) {
-  issueCommand(tag, command);
-  return readToEnd(tag);
+  if(!broken) {
+    issueCommand(tag, command);
+    return readToEnd(tag);
+  } else {
+    DEBUG_SERIAL.println("EmailClient broken, can't execute command.");
+  }
+  return false;
 }
 
 /*
@@ -351,28 +384,32 @@ bool EmailClient::executeCommand(char* tag, char* command) {
  * Prints to seril if printIMAPresponses is true
  */
 void EmailClient::readLine(void) {
-  char c = 'q';
-  int savedChars = 0;
+  if(!broken) {
+    char c = 'q';
+    int savedChars = 0;
 
-  // Keep going until we find the end of the line
-  while(c != '\n') {
-    if(client.available()) {
-      c = client.read();
+    // Keep going until we find the end of the line
+    while(c != '\n') {
+      if(client.available()) {
+        c = client.read();
 #ifdef VERBOSE_DEBUG
-      DEBUG_SERIAL.write(c);
+        DEBUG_SERIAL.write(c);
 #endif
-      // Save the line to the response field
-      if(savedChars < MAX_IMAP_RESPONSE_LENGTH-1) {
-        response[savedChars++] = c;
+        // Save the line to the response field
+        if(savedChars < MAX_IMAP_RESPONSE_LENGTH-1) {
+          response[savedChars++] = c;
+        }
       }
     }
-  }
 
-  // Terminate the response field
-  response[savedChars] = '\0';  
+    // Terminate the response field
+    response[savedChars] = '\0';  
 
-  if(printIMAPresponses) {
-    DEBUG_SERIAL.print(response);
+    if(printIMAPresponses) {
+      DEBUG_SERIAL.print(response);
+    }
+  } else {
+    DEBUG_SERIAL.println("EmailClient broken, can't read line.");
   }
 }
 
@@ -380,12 +417,16 @@ void EmailClient::readLine(void) {
  * Reads the next line of the IMAP response and prints it to serial.
  */
 void EmailClient::readPrintLine(void) {
-  char c = 'q';
-  while(c != '\n') {
-    if(client.available()) {
-      c = client.read();
-      DEBUG_SERIAL.write(c);
+  if(!broken) {
+    char c = 'q';
+    while(c != '\n') {
+      if(client.available()) {
+        c = client.read();
+        DEBUG_SERIAL.write(c);
+      }
     }
+  } else {
+    DEBUG_SERIAL.println("EmailClient broken, can't print line.");
   }
 }
 
@@ -396,107 +437,111 @@ void EmailClient::readPrintLine(void) {
  * tag must be a pointer c style string with 3 characters + a null.
  */ 
 bool EmailClient::readToEnd(char* tag) {
-  // Create the string to search for for the "OK" response
-  char findOK[7];
-  strcpy(findOK, tag);
-  strcat(findOK, " OK");
+  if(!broken) {
+    // Create the string to search for for the "OK" response
+    char findOK[7];
+    strcpy(findOK, tag);
+    strcat(findOK, " OK");
 
-  // Create the string to search for for the "BAD" response
-  char findBAD[8];
-  strcpy(findBAD, tag);
-  strcat(findBAD, " BAD");
+    // Create the string to search for for the "BAD" response
+    char findBAD[8];
+    strcpy(findBAD, tag);
+    strcat(findBAD, " BAD");
 
-  const int okLength = 6;
-  const int badLength = 7;
+    const int okLength = 6;
+    const int badLength = 7;
 
-  // Create a buffer to hold part of the line. Probably could be done better, but I didn't, so too bad.
-  const int lastsize = 7;
-  char lasttxt[lastsize+1];
-  lasttxt[lastsize] = '\0';
+    // Create a buffer to hold part of the line. Probably could be done better, but I didn't, so too bad.
+    const int lastsize = 7;
+    char lasttxt[lastsize+1];
+    lasttxt[lastsize] = '\0';
 #ifdef VERBOSE_DEBUG
-  DEBUG_SERIAL.printf("{%s:%d\t\t%s:%d\t\t%d}\n", findOK, okLength, findBAD, badLength, lastsize);
+    DEBUG_SERIAL.printf("{%s:%d\t\t%s:%d\t\t%d}\n", findOK, okLength, findBAD, badLength, lastsize);
 #endif
 
-  // Pay attention to where we are in the line
-  int linepos = 0;
-  bool foundend = false;
-  bool status = false;
-  int savedChars = 0;
+    // Pay attention to where we are in the line
+    int linepos = 0;
+    bool foundend = false;
+    bool status = false;
+    int savedChars = 0;
 
-  char c = 'q';
-  // Keep going until the new linne after the end of the response
-  while(!foundend || c != '\n') {
-    if(client.available()) {
-      c = client.read();
+    char c = 'q';
+    // Keep going until the new linne after the end of the response
+    while(!foundend || c != '\n') {
+      if(client.available()) {
+        c = client.read();
 #ifdef VERBOSE_DEBUG
-      DEBUG_SERIAL.write(c);
+        DEBUG_SERIAL.write(c);
 #endif
-      // Save the character to the response, unless the response is too long, then don't.
-      if(savedChars < MAX_IMAP_RESPONSE_LENGTH-1) {
-        response[savedChars++] = c;
-      }
-
-      // If this character is the end of the line
-      if(c == '\n' || c == '\r') { // since IMAP uses /r/n for line endings
-        linepos = -1;
-      } else {
-        linepos++;
-      }
-
-      // If we haven't found the end of the response,
-      // and are in the part of the line where we might find the indiciator
-      if(!foundend && linepos >= 0 && linepos <= lastsize+1) {
-        for(int i = 0; i < lastsize-1; i++) {
-          lasttxt[i] = lasttxt[i+1];
+        // Save the character to the response, unless the response is too long, then don't.
+        if(savedChars < MAX_IMAP_RESPONSE_LENGTH-1) {
+          response[savedChars++] = c;
         }
-        lasttxt[lastsize-1] = c;
 
-        // Check if we have the "OK" response
-        if(linepos == okLength || linepos+1 == okLength) {
-          if(found(lasttxt, findOK, lastsize, okLength)) {
-            foundend = true;
-            status = true;
-#ifdef VERBOSE_DEBUG
-            DEBUG_SERIAL.print("($)");
-#endif
+        // If this character is the end of the line
+        if(c == '\n' || c == '\r') { // since IMAP uses /r/n for line endings
+          linepos = -1;
+        } else {
+          linepos++;
+        }
+
+        // If we haven't found the end of the response,
+        // and are in the part of the line where we might find the indiciator
+        if(!foundend && linepos >= 0 && linepos <= lastsize+1) {
+          for(int i = 0; i < lastsize-1; i++) {
+            lasttxt[i] = lasttxt[i+1];
           }
-        }     
-        // Check if we have the "BAD" response   
-        if(!foundend && (linepos == badLength || linepos+1 == badLength)) {
-          if(found(lasttxt, findBAD, lastsize, badLength)) {
-            foundend = true;
+          lasttxt[lastsize-1] = c;
+
+          // Check if we have the "OK" response
+          if(linepos == okLength || linepos+1 == okLength) {
+            if(found(lasttxt, findOK, lastsize, okLength)) {
+              foundend = true;
+              status = true;
 #ifdef VERBOSE_DEBUG
-            DEBUG_SERIAL.print("(!)");
+              DEBUG_SERIAL.print("($)");
 #endif
+            }
+          }     
+          // Check if we have the "BAD" response   
+          if(!foundend && (linepos == badLength || linepos+1 == badLength)) {
+            if(found(lasttxt, findBAD, lastsize, badLength)) {
+              foundend = true;
+#ifdef VERBOSE_DEBUG
+              DEBUG_SERIAL.print("(!)");
+#endif
+            }
           }
         }
       }
     }
+
+    // Terminate the response string
+    response[savedChars] = '\0';  
+
+    if(printIMAPresponses) {
+      DEBUG_SERIAL.print(response);
+    }
+
+    return status;
+  } else {
+    DEBUG_SERIAL.println("EmailClient broken, can't read response.");
   }
-
-  // Terminate the response string
-  response[savedChars] = '\0';  
-
-  if(printIMAPresponses) {
-    DEBUG_SERIAL.print(response);
-  }
-
-  return status;
 }
 
 /*
- * Sets wether or not to print the IMAP debugging info to serial
- */
+* Sets wether or not to print the IMAP debugging info to serial
+*/
 void EmailClient::setPrintIMAPresponses(bool toPrint) {
   printIMAPresponses = toPrint;
 }
 
 /*
- * Private method used to determine if the end of the IMAP response has been found.
- */ 
+* Private method used to determine if the end of the IMAP response has been found.
+*/ 
 bool EmailClient::found(const char* last, const char* search, int lastlength, int searchlength) {
 #ifdef VERBOSE_DEBUG
-  DEBUG_SERIAL.printf("[%s:%d\t\t%s:%d]", last, strlen(last), search, searchlength);
+    DEBUG_SERIAL.printf("[%s:%d\t\t%s:%d]", last, strlen(last), search, searchlength);
 #endif
 
   // Check if the line length is at least as long as the search length
@@ -517,4 +562,5 @@ bool EmailClient::found(const char* last, const char* search, int lastlength, in
     // The line lengths were wrong, so exit
     return false;
   }
+  return false;
 }
