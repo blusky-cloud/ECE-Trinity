@@ -95,8 +95,10 @@ void loop() {
       */
     }
     else {
-      lower_flag();
-      flag_is_raised = false;
+      if (flag_is_raised) {
+        lower_flag();
+        flag_is_raised = false;
+      }
     }
   }
   delay(50);
