@@ -24,6 +24,7 @@ void scroll_banner(String text, int reps);
 #define CHECK_MAILBOX_DELAY 1000
 unsigned long nextCheck = 0;
 String prev_subj("N/A");
+bool flag_is_raised = false;
 
 // No additional setup is required.
 void setup() {
@@ -49,6 +50,7 @@ void setup() {
   }
   */
   nextCheck = millis();
+  reset_flag(90);
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing
@@ -64,19 +66,37 @@ void loop() {
       char from[MAX_EMAIL_SUBJECT_LENGTH];
       email.getLatestFrom(from);
 
+      //raise the flag if it's not yet raised
+      if (!flag_is_raised) {
+        raise_flag();
+        flag_is_raised = true;
+      }
+
+      // scroll latest unread subject
+      String banner("New Msg From: ");
+      banner.concat(from);
+      banner.concat(", Subject: ");
+      banner.concat(subj);
+      scroll_banner(banner, 1);
+
       // check to make sure we aren't repeating a notification
+      /*
       String test(subj);
       if (!prev_subj.equals(test)) {
           // copy char arrays to String class for notify argument
           String banner("New Msg From: ");
           banner.concat(from);
-          banner.concat(", Re: ");
+          banner.concat(", Subject: ");
           banner.concat(subj);
 
           notify(banner);
           prev_subj = subj;
       }
-
+      */
+    }
+    else {
+      lower_flag();
+      flag_is_raised = false;
     }
   }
   delay(50);

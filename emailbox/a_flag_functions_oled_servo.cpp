@@ -119,7 +119,7 @@ void lower_flag()
 
 void reset_flag(int reset) // get flag to a specified angle at a reasonable speed
 {
-  Serial.println("reset flag called");
+  //Serial.println("reset flag called");
   int pos = myservo.read();
   Serial.println(pos);
   if (pos != 90)
@@ -195,6 +195,6 @@ void scroll_banner(String text, int reps)
   }
 
   display.clearDisplay();
-  display.Display();
+  display.display();
 }
 
