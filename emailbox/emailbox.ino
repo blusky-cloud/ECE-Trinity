@@ -50,7 +50,8 @@ void setup() {
   }
   */
   nextCheck = millis();
-  reset_flag(90);
+  //reset_flag(90);
+  
 }
 
 // Make sure to call debug.read() occasionally so that the debugger can do its thing

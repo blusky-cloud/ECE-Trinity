@@ -78,8 +78,11 @@ void setupPeripherals() {
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
   display.display();
-  delay(1000); // Pause for 2 seconds
+  delay(2000); // Pause for 2 seconds
   display.clearDisplay();
+  display.display();
+
+  myservo.write(90);
 }
 
 void notify(String info)
